@@ -9,3 +9,5 @@ coverage/
 .vite/
 *.tsbuildinfo
 devin-tokens.sh
+.claude/hooks/.state/
+scripts/agentes/saida/

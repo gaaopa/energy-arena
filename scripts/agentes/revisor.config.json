@@ -1,0 +1,59 @@
+{
+  "shell": { "setup_complete": true },
+  "permissions": {
+    "deny": [
+      "edit",
+      "write",
+      "exec",
+      "apply_patch",
+      "notebook_edit",
+      "webfetch",
+      "web_search",
+      "skill",
+      "run_subagent",
+      "read_subagent",
+      "request_scope",
+      "todo_write",
+      "ask_user_question",
+      "get_output",
+      "write_to_process",
+      "kill_shell",
+      "browser_preview",
+      "close_browser_preview",
+      "mcp__*",
+      "Read(**/.env*)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(**/*.pfx)",
+      "Read(**/*.p12)",
+      "Read(**/*.keystore)",
+      "Read(**/id_rsa*)",
+      "Read(**/credentials*)",
+      "Read(**/*secret*)",
+      "Read(**/devin-tokens.sh)",
+      "Read(C:/piloto/**/.env*)",
+      "Read(C:/piloto/**/*.pem)",
+      "Read(C:/piloto/**/*.key)",
+      "Read(C:/piloto/**/*.pfx)",
+      "Read(C:/piloto/**/*.p12)",
+      "Read(C:/piloto/**/*.keystore)",
+      "Read(C:/piloto/**/id_rsa*)",
+      "Read(C:/piloto/**/credentials*)",
+      "Read(C:/piloto/**/*secret*)",
+      "Read(C:/piloto/**/devin-tokens.sh)"
+    ]
+  },
+  "read_config_from": {
+    "agents_standard": false,
+    "cursor": false,
+    "windsurf": false,
+    "claude": false,
+    "copilot": false,
+    "opencode": false,
+    "zed": false
+  },
+  "version": 1,
+  "devin": {
+    "org_id": "org-ebdfa24672114e6e877374b1af6f2cd5"
+  }
+}

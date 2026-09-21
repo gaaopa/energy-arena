@@ -1,0 +1,70 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^(Bash|exec)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-${DEVIN_PROJECT_DIR:-.}}/.claude/hooks/db-guard.mjs\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "^(Edit|Write|MultiEdit|edit|write|apply_patch)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-${DEVIN_PROJECT_DIR:-.}}/.claude/hooks/typecheck.mjs\"",
+            "timeout": 60
+          },
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-${DEVIN_PROJECT_DIR:-.}}/.claude/hooks/lint-bug.mjs\"",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-${DEVIN_PROJECT_DIR:-.}}/.claude/hooks/padroes-proibidos.mjs\"",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "^(Edit|Write|MultiEdit|NotebookEdit|edit|write|apply_patch|notebook_edit|Bash|exec)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-${DEVIN_PROJECT_DIR:-.}}/.claude/hooks/entrega.mjs\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-${DEVIN_PROJECT_DIR:-.}}/.claude/hooks/entrega.mjs\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-${DEVIN_PROJECT_DIR:-.}}/.claude/hooks/entrega.mjs\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}
