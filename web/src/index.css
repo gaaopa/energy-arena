@@ -1,0 +1,100 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+/* ── Energy Arena — identidade "clay" ────────────────────────────
+   Fachada da marca: terracota + letras brancas + "G" laranja.
+   A paleta neutra é remapeada para um dark QUENTE (marrom-argila):
+   as classes já existentes (bg-white, bg-zinc-50, text-zinc-500, ...)
+   renderizam em tons quentes escuros; zinc-900 vira o laranja da marca.
+   Para código novo prefira os tokens semânticos:
+   bg-base · bg-deep · bg-surface · bg-raised · border-line ·
+   text-ink · text-muted · bg-brand · text-brand · bg-clay · text-clay. */
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Barlow Condensed', 'Inter', ui-sans-serif, sans-serif;
+
+  /* Tokens semânticos da marca */
+  --color-base: #150f0c;
+  --color-deep: #100b08;
+  --color-surface: #221812;
+  --color-raised: #2e211a;
+  --color-line: #453327;
+  --color-ink: #f8f1e9;
+  --color-muted: #b5a292;
+  --color-brand: #f97316;
+  --color-clay: #c97b4e;
+
+  /* Inversão neutra light → dark quente */
+  --color-white: #221812;
+  --color-zinc-50: #150f0c;
+  --color-zinc-100: #2e211a;
+  --color-zinc-200: #453327;
+  --color-zinc-300: #5c4433;
+  --color-zinc-400: #8a7563;
+  --color-zinc-500: #b5a292;
+  --color-zinc-600: #ddd0c0;
+  --color-zinc-700: #ede4d9;
+  --color-zinc-900: #f97316;
+  --color-zinc-950: #0c0806;
+
+  /* Status/badges legíveis sobre fundo escuro */
+  --color-red-100: rgb(239 68 68 / 0.12);
+  --color-red-600: #f87171;
+  --color-red-700: #f87171;
+  --color-emerald-100: rgb(16 185 129 / 0.12);
+  --color-emerald-700: #34d399;
+  --color-emerald-800: #34d399;
+  --color-amber-100: rgb(245 158 11 / 0.14);
+  --color-amber-700: #fbbf24;
+  --color-amber-800: #fbbf24;
+  --color-sky-100: rgb(14 165 233 / 0.12);
+  --color-sky-800: #38bdf8;
+  --color-blue-100: rgb(59 130 246 / 0.12);
+  --color-blue-700: #60a5fa;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    background-color: #150f0c;
+    color: #ddd0c0;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 {
+    color: #f8f1e9;
+  }
+  ::selection {
+    background: rgb(249 115 22 / 0.35);
+  }
+  ::placeholder {
+    color: #8a7563;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #453327;
+    border-radius: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/* Fora de camadas: vence as utilities de borda no :focus */
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgb(249 115 22 / 0.18);
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid #f97316;
+  outline-offset: 2px;
+}

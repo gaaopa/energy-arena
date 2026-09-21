@@ -1,0 +1,212 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  RECEPCAO
+  INSTRUTOR
+  ALUNO
+}
+
+enum StatusAluno {
+  ATIVO
+  INATIVO
+  SUSPENSO
+}
+
+enum StatusMatricula {
+  ATIVA
+  CANCELADA
+  VENCIDA
+  SUSPENSA
+}
+
+enum StatusPagamento {
+  PENDENTE
+  PAGO
+  VENCIDO
+  CANCELADO
+  ESTORNADO
+}
+
+enum MetodoPagamento {
+  PIX
+  BOLETO
+  CARTAO_CREDITO
+  CARTAO_DEBITO
+  DINHEIRO
+}
+
+enum PeriodoPlano {
+  MENSAL
+  TRIMESTRAL
+  SEMESTRAL
+  ANUAL
+}
+
+enum MetodoCheckIn {
+  QR_CODE
+  MANUAL
+}
+
+model Unidade {
+  id           String   @id @default(uuid())
+  nome         String
+  endereco     String?
+  telefone     String?
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  usuarios   Usuario[]
+  alunos     Aluno[]
+  matriculas Matricula[]
+  checkIns   CheckIn[]
+  aulas      Aula[]
+}
+
+model Usuario {
+  id           String   @id @default(uuid())
+  nome         String
+  email        String   @unique
+  senhaHash    String
+  role         Role     @default(RECEPCAO)
+  ativo        Boolean  @default(true)
+  unidadeId    String?
+  unidade      Unidade? @relation(fields: [unidadeId], references: [id])
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+  aulas         Aula[]         @relation("InstrutorAulas")
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid())
+  tokenHash  String    @unique
+  usuarioId  String
+  usuario    Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  expiraEm   DateTime
+  revogadoEm DateTime?
+  criadoEm   DateTime  @default(now())
+
+  @@index([usuarioId])
+}
+
+model Aluno {
+  id             String      @id @default(uuid())
+  nome           String
+  cpf            String      @unique
+  email          String?
+  telefone       String?
+  dataNascimento DateTime?
+  status         StatusAluno @default(ATIVO)
+  unidadeId      String
+  unidade        Unidade     @relation(fields: [unidadeId], references: [id])
+  criadoEm       DateTime    @default(now())
+  atualizadoEm   DateTime    @updatedAt
+
+  matriculas   Matricula[]
+  checkIns     CheckIn[]
+  agendamentos Agendamento[]
+
+  @@index([unidadeId, status])
+}
+
+model Plano {
+  id           String       @id @default(uuid())
+  nome         String
+  descricao    String?
+  valor        Decimal      @db.Decimal(10, 2)
+  periodo      PeriodoPlano
+  multiUnidade Boolean      @default(false)
+  ativo        Boolean      @default(true)
+  criadoEm     DateTime     @default(now())
+  atualizadoEm DateTime     @updatedAt
+
+  matriculas Matricula[]
+}
+
+model Matricula {
+  id           String          @id @default(uuid())
+  alunoId      String
+  aluno        Aluno           @relation(fields: [alunoId], references: [id])
+  planoId      String
+  plano        Plano           @relation(fields: [planoId], references: [id])
+  unidadeId    String
+  unidade      Unidade         @relation(fields: [unidadeId], references: [id])
+  dataInicio   DateTime
+  dataFim      DateTime
+  valor        Decimal         @db.Decimal(10, 2)
+  status       StatusMatricula @default(ATIVA)
+  criadoEm     DateTime        @default(now())
+  atualizadoEm DateTime        @updatedAt
+
+  pagamentos Pagamento[]
+
+  @@index([alunoId, status])
+  @@index([unidadeId])
+}
+
+model Pagamento {
+  id           String          @id @default(uuid())
+  matriculaId  String
+  matricula    Matricula       @relation(fields: [matriculaId], references: [id])
+  valor        Decimal         @db.Decimal(10, 2)
+  vencimento   DateTime
+  pagoEm       DateTime?
+  metodo       MetodoPagamento?
+  status       StatusPagamento @default(PENDENTE)
+  referencia   String?
+  criadoEm     DateTime        @default(now())
+  atualizadoEm DateTime        @updatedAt
+
+  @@index([matriculaId])
+  @@index([status, vencimento])
+}
+
+model CheckIn {
+  id        String        @id @default(uuid())
+  alunoId   String
+  aluno     Aluno         @relation(fields: [alunoId], references: [id])
+  unidadeId String
+  unidade   Unidade       @relation(fields: [unidadeId], references: [id])
+  metodo    MetodoCheckIn @default(QR_CODE)
+  criadoEm  DateTime      @default(now())
+
+  @@index([alunoId, criadoEm])
+  @@index([unidadeId, criadoEm])
+}
+
+model Aula {
+  id          String   @id @default(uuid())
+  nome        String
+  unidadeId   String
+  unidade     Unidade  @relation(fields: [unidadeId], references: [id])
+  instrutorId String?
+  instrutor   Usuario? @relation("InstrutorAulas", fields: [instrutorId], references: [id])
+  diaSemana   Int
+  horario     String
+  capacidade  Int      @default(20)
+  ativo       Boolean  @default(true)
+
+  agendamentos Agendamento[]
+}
+
+model Agendamento {
+  id       String   @id @default(uuid())
+  aulaId   String
+  aula     Aula     @relation(fields: [aulaId], references: [id])
+  alunoId  String
+  aluno    Aluno    @relation(fields: [alunoId], references: [id])
+  data     DateTime
+  criadoEm DateTime @default(now())
+
+  @@unique([aulaId, alunoId, data])
+}

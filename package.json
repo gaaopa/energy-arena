@@ -1,0 +1,32 @@
+{
+  "name": "gym-system",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sistema de gestão para academia multi-unidade",
+  "workspaces": [
+    "api",
+    "web"
+  ],
+  "scripts": {
+    "dev:api": "npm run start:dev --workspace api",
+    "dev:web": "npm run dev --workspace web",
+    "build": "npm run build --workspace api && npm run build --workspace web",
+    "typecheck": "npm run typecheck --workspace api && npm run typecheck --workspace web",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:migrate": "npm run prisma:migrate --workspace api",
+    "db:seed": "npm run prisma:seed --workspace api"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  },
+  "allowScripts": {
+    "@prisma/client@6.12.0": true,
+    "@prisma/engines@6.12.0": true,
+    "prisma@6.12.0": true,
+    "esbuild@0.28.2": true
+  }
+}
