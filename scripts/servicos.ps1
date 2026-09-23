@@ -160,9 +160,21 @@ switch ($Verbo) {
     # derrubar o servico, a tarefa o recria destacado sem esperar o boot).
     $logon = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
     $repete = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 5)
-    Register-ScheduledTask -TaskName $Tarefa -Action $acao -Trigger @($logon, $repete) `
-      -Description 'Sobe API (:3000) e web (:5173) da Energy Arena destacados de qualquer sessao' -Force | Out-Null
-    Write-Output "tarefa '$Tarefa' registrada (AtLogOn + a cada 5 min, usuario $env:USERNAME)"
+    # S4U (sessao 0) em vez de Interactive: tarefa Interactive cria o console do
+    # powershell.exe ANTES de ler -WindowStyle Hidden e uma janela preta pisca a cada tick.
+    # Registrar S4U exige PowerShell elevado; sem elevacao cai para Interactive (pisca).
+    $desc = 'Sobe API (:3000) e web (:5173) da Energy Arena destacados de qualquer sessao'
+    try {
+      $quem = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType S4U -RunLevel Limited
+      Register-ScheduledTask -TaskName $Tarefa -Action $acao -Trigger @($logon, $repete) -Principal $quem `
+        -Description $desc -Force -ErrorAction Stop | Out-Null
+      Write-Output "tarefa '$Tarefa' registrada (AtLogOn + a cada 5 min, usuario $env:USERNAME, S4U sem janela)"
+    } catch {
+      Register-ScheduledTask -TaskName $Tarefa -Action $acao -Trigger @($logon, $repete) `
+        -Description $desc -Force | Out-Null
+      Write-Output "tarefa '$Tarefa' registrada como Interactive (janela pisca a cada tick) - S4U negado: $($_.Exception.Message)"
+      Write-Output "para registrar sem janela: rode 'instalar' num PowerShell como administrador"
+    }
   }
   'desinstalar' {
     if (Get-ScheduledTask -TaskName $Tarefa -ErrorAction SilentlyContinue) {
