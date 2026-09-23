@@ -11,6 +11,7 @@ export interface Plano {
   descricao?: string | null;
   valor: number | string;
   periodo: Periodo;
+  recorrente: boolean;
   multiUnidade: boolean;
   ativo: boolean;
 }
@@ -33,6 +34,7 @@ export function PlanoForm({ plano, onClose }: PlanoFormProps) {
   const [descricao, setDescricao] = useState(plano?.descricao ?? '');
   const [valor, setValor] = useState(plano ? String(plano.valor) : '');
   const [periodo, setPeriodo] = useState<Periodo>(plano?.periodo ?? 'MENSAL');
+  const [recorrente, setRecorrente] = useState(plano?.recorrente ?? false);
   const [multiUnidade, setMultiUnidade] = useState(
     plano?.multiUnidade ?? false,
   );
@@ -46,6 +48,7 @@ export function PlanoForm({ plano, onClose }: PlanoFormProps) {
         descricao: descricao.trim() || undefined,
         valor: Number(valor),
         periodo,
+        recorrente,
         multiUnidade,
       };
       if (plano) {
@@ -132,6 +135,15 @@ export function PlanoForm({ plano, onClose }: PlanoFormProps) {
             </select>
           </label>
         </div>
+        <label className="mb-4 flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={recorrente}
+            onChange={(e) => setRecorrente(e.target.checked)}
+            className="h-4 w-4 accent-zinc-900"
+          />
+          Recorrente (sem fim — cobra a cada período até cancelar)
+        </label>
         <label className="mb-4 flex items-center gap-2 text-sm">
           <input
             type="checkbox"

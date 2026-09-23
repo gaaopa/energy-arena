@@ -4,6 +4,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 import { api } from '../lib/api';
 import { AlunoForm } from '../components/AlunoForm';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { AlunoFoto } from '../components/AlunoFoto';
+import {
+  TrocarPlanoForm,
+  type MatriculaParaTroca,
+} from '../components/TrocarPlanoForm';
 import {
   StatusAlunoBadge,
   StatusMatriculaBadge,
@@ -17,12 +23,14 @@ interface Matricula {
   id: string;
   status: StatusMatricula;
   dataInicio: string;
-  dataFim: string;
+  dataFim: string | null;
+  proximaRenovacao: string | null;
   valor: number | string;
   plano: {
     id: string;
     nome: string;
     periodo: PeriodoPlano;
+    recorrente: boolean;
     multiUnidade: boolean;
   };
 }
@@ -36,6 +44,10 @@ interface AlunoDetalhe {
   dataNascimento: string | null;
   status: StatusAluno;
   unidadeId: string;
+  foto: string | null;
+  catracaId: number | null;
+  consentimentoBiometriaEm: string | null;
+  atualizadoEm: string;
   unidade: { id: string; nome: string };
   matriculas: Matricula[];
 }
@@ -111,9 +123,16 @@ export function AlunoDetailPage() {
 
   const [editando, setEditando] = useState(false);
   const [novaMatriculaAberta, setNovaMatriculaAberta] = useState(false);
+  const [trocandoPlano, setTrocandoPlano] =
+    useState<MatriculaParaTroca | null>(null);
+  const [cancelandoMatricula, setCancelandoMatricula] =
+    useState<Matricula | null>(null);
   const [planoId, setPlanoId] = useState('');
   const [dataInicio, setDataInicio] = useState(
-    () => new Date().toISOString().slice(0, 10),
+    () =>
+      new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 10),
   );
   const [erroMatricula, setErroMatricula] = useState<string | null>(null);
 
@@ -182,17 +201,6 @@ export function AlunoDetailPage() {
     criarMatricula.mutate(aluno.unidadeId);
   }
 
-  function confirmarCancelamento(matriculaId: string) {
-    if (
-      window.confirm(
-        'Cancelar esta matrícula? Cobranças pendentes também serão canceladas.',
-      )
-    ) {
-      setErroMatricula(null);
-      cancelarMatricula.mutate(matriculaId);
-    }
-  }
-
   if (!alunoId) return <Navigate to="/alunos" replace />;
 
   if (isPending) {
@@ -223,9 +231,18 @@ export function AlunoDetailPage() {
         ← Voltar para alunos
       </Link>
       <div className="mb-4 mt-2 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-bold">{aluno.nome}</h2>
-          <StatusAlunoBadge status={aluno.status} />
+        <div className="flex items-center gap-4">
+          <AlunoFoto
+            alunoId={aluno.id}
+            nome={aluno.nome}
+            foto={aluno.foto}
+            versao={aluno.atualizadoEm}
+            className="h-16 w-16 text-xl"
+          />
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-bold">{aluno.nome}</h2>
+            <StatusAlunoBadge status={aluno.status} />
+          </div>
         </div>
         <button
           onClick={() => setEditando(true)}
@@ -351,7 +368,21 @@ export function AlunoDetailPage() {
                   </span>
                 </td>
                 <td className="py-2.5 pr-4 text-zinc-600">
-                  {formatarData(m.dataInicio)} – {formatarData(m.dataFim)}
+                  {m.dataFim === null ? (
+                    <>
+                      {formatarData(m.dataInicio)} – contínuo
+                      {m.status === 'ATIVA' && m.proximaRenovacao && (
+                        <span className="block text-xs text-zinc-500">
+                          Renova {formatarData(m.proximaRenovacao)}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {formatarData(m.dataInicio)} –{' '}
+                      {formatarData(m.dataFim)}
+                    </>
+                  )}
                 </td>
                 <td className="py-2.5 pr-4">{formatarMoeda(m.valor)}</td>
                 <td className="py-2.5 pr-4">
@@ -359,13 +390,26 @@ export function AlunoDetailPage() {
                 </td>
                 <td className="py-2.5 text-right">
                   {m.status === 'ATIVA' && (
-                    <button
-                      onClick={() => confirmarCancelamento(m.id)}
-                      disabled={cancelarMatricula.isPending}
-                      className="text-sm text-red-600 hover:underline disabled:opacity-50"
-                    >
-                      Cancelar
-                    </button>
+                    <div className="flex justify-end gap-3">
+                      <button
+                        onClick={() =>
+                          setTrocandoPlano({
+                            ...m,
+                            aluno: { nome: aluno.nome },
+                          })
+                        }
+                        className="text-sm text-zinc-600 hover:underline"
+                      >
+                        Trocar plano
+                      </button>
+                      <button
+                        onClick={() => setCancelandoMatricula(m)}
+                        disabled={cancelarMatricula.isPending}
+                        className="text-sm text-red-600 hover:underline disabled:opacity-50"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
                   )}
                 </td>
               </tr>
@@ -401,6 +445,25 @@ export function AlunoDetailPage() {
 
       {editando && (
         <AlunoForm aluno={aluno} onClose={() => setEditando(false)} />
+      )}
+      {trocandoPlano && (
+        <TrocarPlanoForm
+          matricula={trocandoPlano}
+          onClose={() => setTrocandoPlano(null)}
+        />
+      )}
+      {cancelandoMatricula && (
+        <ConfirmDialog
+          titulo="Cancelar matrícula"
+          mensagem={`Cancelar a matrícula no plano ${cancelandoMatricula.plano.nome}? Cobranças pendentes também serão canceladas.`}
+          confirmLabel="Cancelar matrícula"
+          onClose={() => setCancelandoMatricula(null)}
+          onConfirm={() => {
+            setErroMatricula(null);
+            cancelarMatricula.mutate(cancelandoMatricula.id);
+            setCancelandoMatricula(null);
+          }}
+        />
       )}
     </div>
   );

@@ -27,6 +27,20 @@ export class CreateMatriculaDto {
   valor?: number;
 }
 
+export class TrocarPlanoDto {
+  @IsUUID()
+  planoId!: string;
+
+  @IsOptional()
+  @IsDateString()
+  dataInicio?: string;
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  valor?: number;
+}
+
 export class QueryMatriculasDto {
   @IsOptional()
   @IsUUID()

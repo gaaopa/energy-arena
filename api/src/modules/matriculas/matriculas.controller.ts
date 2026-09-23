@@ -10,7 +10,11 @@ import {
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { MatriculasService } from './matriculas.service';
-import { CreateMatriculaDto, QueryMatriculasDto } from './dto/matricula.dto';
+import {
+  CreateMatriculaDto,
+  QueryMatriculasDto,
+  TrocarPlanoDto,
+} from './dto/matricula.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthUser } from '../../common/guards/jwt-auth.guard';
@@ -29,6 +33,16 @@ export class MatriculasController {
   @Roles(Role.ADMIN, Role.RECEPCAO)
   create(@Body() dto: CreateMatriculaDto, @CurrentUser() user: AuthUser) {
     return this.matriculas.create(dto, user);
+  }
+
+  @Patch(':id/trocar-plano')
+  @Roles(Role.ADMIN, Role.RECEPCAO)
+  trocarPlano(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: TrocarPlanoDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.matriculas.trocarPlano(id, dto, user);
   }
 
   @Patch(':id/cancelar')

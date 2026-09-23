@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { AlunoFoto } from './AlunoFoto';
 import type { StatusAluno } from './AlunoStatusBadge';
 
 interface Unidade {
@@ -23,6 +24,9 @@ export interface AlunoParaForm {
   dataNascimento: string | null;
   status: StatusAluno;
   unidadeId: string;
+  foto: string | null;
+  catracaId: number | null;
+  atualizadoEm?: string;
 }
 
 interface AlunoFormProps {
@@ -64,7 +68,26 @@ export function AlunoForm({ aluno, onClose }: AlunoFormProps) {
     aluno?.unidadeId ?? user?.unidadeId ?? '',
   );
   const [status, setStatus] = useState<StatusAluno>(aluno?.status ?? 'ATIVO');
+  const [catracaId, setCatracaId] = useState(
+    aluno?.catracaId ? String(aluno.catracaId) : '',
+  );
   const [erro, setErro] = useState<string | null>(null);
+  const [fotoFile, setFotoFile] = useState<File | null>(null);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+
+  const selecionarFoto = (arquivo: File | undefined) => {
+    if (!arquivo) return;
+    if (arquivo.size > 5 * 1024 * 1024) {
+      setErro('A foto deve ter no máximo 5 MB');
+      return;
+    }
+    setErro(null);
+    setFotoFile(arquivo);
+    setFotoPreview((antiga) => {
+      if (antiga) URL.revokeObjectURL(antiga);
+      return URL.createObjectURL(arquivo);
+    });
+  };
 
   const { data: unidades, isError: erroUnidades } = useQuery({
     queryKey: ['unidades'],
@@ -84,13 +107,28 @@ export function AlunoForm({ aluno, onClose }: AlunoFormProps) {
         telefone: telefone.trim() || undefined,
         dataNascimento: dataNascimento || undefined,
         unidadeId,
+        ...(catracaId.trim()
+          ? { catracaId: Number(catracaId.trim()) }
+          : {}),
       };
-      if (aluno) {
-        return api.patch(`/alunos/${aluno.id}`, { ...base, status });
+      const res = aluno
+        ? await api.patch<{ id: string }>(`/alunos/${aluno.id}`, {
+            ...base,
+            status,
+          })
+        : await api.post<{ id: string }>('/alunos', {
+            ...base,
+            cpf: cpf.replace(/\D/g, ''),
+          });
+      if (fotoFile) {
+        const fd = new FormData();
+        fd.append('foto', fotoFile);
+        await api.post(`/alunos/${res.data.id}/foto`, fd);
       }
-      return api.post('/alunos', { ...base, cpf: cpf.replace(/\D/g, '') });
+      return res;
     },
     onSuccess: () => {
+      if (fotoPreview) URL.revokeObjectURL(fotoPreview);
       void queryClient.invalidateQueries({ queryKey: ['alunos'] });
       onClose();
     },
@@ -135,6 +173,44 @@ export function AlunoForm({ aluno, onClose }: AlunoFormProps) {
           {editando ? 'Editar aluno' : 'Novo aluno'}
         </h3>
         <form onSubmit={onSubmit}>
+          <div className="mb-4 flex items-center gap-4">
+            {fotoPreview ? (
+              <img
+                src={fotoPreview}
+                alt="Pré-visualização"
+                className="h-16 w-16 rounded-full object-cover"
+              />
+            ) : aluno ? (
+              <AlunoFoto
+                alunoId={aluno.id}
+                nome={aluno.nome}
+                foto={aluno.foto}
+                versao={aluno.atualizadoEm}
+                className="h-16 w-16 text-lg"
+              />
+            ) : (
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-orange-500/15 text-sm font-semibold text-orange-500">
+                Foto
+              </div>
+            )}
+            <div>
+              <label className="cursor-pointer rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50">
+                {fotoPreview || aluno?.foto ? 'Trocar foto' : 'Escolher foto'}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    selecionarFoto(e.target.files?.[0]);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+              <p className="mt-1 text-xs text-zinc-500">
+                JPG, PNG ou WebP — até 5 MB.
+              </p>
+            </div>
+          </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="block text-sm sm:col-span-2">
               Nome *
@@ -200,6 +276,18 @@ export function AlunoForm({ aluno, onClose }: AlunoFormProps) {
                   </option>
                 ))}
               </select>
+            </label>
+            <label className="block text-sm">
+              ID na catraca
+              <input
+                type="number"
+                min={1}
+                inputMode="numeric"
+                placeholder="Opcional"
+                value={catracaId}
+                onChange={(e) => setCatracaId(e.target.value)}
+                className={inputClasses}
+              />
             </label>
             {editando && (
               <label className="block text-sm sm:col-span-2">

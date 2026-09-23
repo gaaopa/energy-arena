@@ -71,7 +71,14 @@ export function PlanosPage() {
                   )}
                 </td>
                 <td className="px-5 py-3">{brl.format(Number(plano.valor))}</td>
-                <td className="px-5 py-3">{PERIODO_LABEL[plano.periodo]}</td>
+                <td className="px-5 py-3">
+                  {PERIODO_LABEL[plano.periodo]}
+                  {plano.recorrente && (
+                    <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-700">
+                      Recorrente
+                    </span>
+                  )}
+                </td>
                 <td className="px-5 py-3">
                   {plano.multiUnidade ? (
                     <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">

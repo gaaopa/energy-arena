@@ -2,10 +2,12 @@ import {
   IsDateString,
   IsEmail,
   IsEnum,
+  IsInt,
   IsOptional,
   IsString,
   IsUUID,
   Matches,
+  Min,
 } from 'class-validator';
 import { StatusAluno } from '@prisma/client';
 
@@ -28,6 +30,11 @@ export class CreateAlunoDto {
   @IsOptional()
   @IsDateString()
   dataNascimento?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  catracaId?: number;
 
   @IsUUID()
   unidadeId!: string;
@@ -53,6 +60,11 @@ export class UpdateAlunoDto {
   @IsOptional()
   @IsEnum(StatusAluno)
   status?: StatusAluno;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  catracaId?: number;
 
   @IsOptional()
   @IsUUID()

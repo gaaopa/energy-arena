@@ -11,6 +11,9 @@ function extrairMensagemErro(erro: unknown, fallback: string): string {
   return Array.isArray(msg) ? msg.join(', ') : (msg ?? fallback);
 }
 
+// GET /unidades inclui _count.alunos (contagem feita no banco)
+type UnidadeComCount = Unidade & { _count: { alunos: number } };
+
 export function UnidadesPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
@@ -21,7 +24,8 @@ export function UnidadesPage() {
 
   const { data: unidades, isPending, isError } = useQuery({
     queryKey: ['unidades'],
-    queryFn: async () => (await api.get<Unidade[]>('/unidades')).data,
+    queryFn: async () =>
+      (await api.get<UnidadeComCount[]>('/unidades')).data,
   });
 
   const toggleAtivo = useMutation({
@@ -71,6 +75,7 @@ export function UnidadesPage() {
               <th className="px-5 py-3 font-medium">Nome</th>
               <th className="px-5 py-3 font-medium">Endereço</th>
               <th className="px-5 py-3 font-medium">Telefone</th>
+              <th className="px-5 py-3 font-medium">Alunos</th>
               <th className="px-5 py-3 font-medium">Status</th>
               {isAdmin && <th className="px-5 py-3 font-medium">Ações</th>}
             </tr>
@@ -81,6 +86,9 @@ export function UnidadesPage() {
                 <td className="px-5 py-3">{unidade.nome}</td>
                 <td className="px-5 py-3">{unidade.endereco ?? '—'}</td>
                 <td className="px-5 py-3">{unidade.telefone ?? '—'}</td>
+                <td className="px-5 py-3 font-medium">
+                  {unidade._count.alunos}
+                </td>
                 <td className="px-5 py-3">
                   <span
                     className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${

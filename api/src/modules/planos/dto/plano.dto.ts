@@ -25,6 +25,10 @@ export class CreatePlanoDto {
 
   @IsOptional()
   @IsBoolean()
+  recorrente?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
   multiUnidade?: boolean;
 }
 
@@ -45,6 +49,10 @@ export class UpdatePlanoDto {
   @IsOptional()
   @IsEnum(PeriodoPlano)
   periodo?: PeriodoPlano;
+
+  @IsOptional()
+  @IsBoolean()
+  recorrente?: boolean;
 
   @IsOptional()
   @IsBoolean()

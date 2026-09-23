@@ -18,7 +18,8 @@ Sistema de gestão para academia multi-unidade (2 unidades, ~400 alunos).
 ```bash
 npm install                 # instala todos os workspaces
 cp api/.env.example api/.env  # ajuste os segredos JWT (no cmd.exe do Windows: `copy api\.env.example api\.env`)
-npm run db:up               # sobe o postgres
+npm run db:up               # sobe o postgres via Docker; nesta máquina o Postgres já é o
+                            # serviço nativo postgresql-x64-16 — pule este passo se Running
 npm run db:migrate          # cria as tabelas
 npm run db:seed             # dados iniciais (unidades, admin, planos)
 ```
@@ -33,6 +34,20 @@ npm run dev:web   # Web em http://localhost:5173
 ```
 
 O Vite faz proxy de `/api` → `localhost:3000`, então cookies e CORS funcionam sem configuração extra em dev.
+
+Para os servidores sobreviverem a sessão de agente/terminal que cai (processo filho
+morre junto), eles nascem do Agendador de Tarefas:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\servicos.ps1 instalar   # registra a tarefa (logon + auto-cura a cada 5 min)
+powershell -ExecutionPolicy Bypass -File scripts\servicos.ps1 subir      # dispara a tarefa agora (sem tarefa,
+                                                                       # sobe filho da sessão — morre com ela)
+powershell -ExecutionPolicy Bypass -File scripts\servicos.ps1 status     # portas, PIDs e processo-pai
+powershell -ExecutionPolicy Bypass -File scripts\servicos.ps1 parar      # para os dois
+```
+
+A API sobe de `api/dist/main.js` — rode `npm run build` antes (e após mudar código).
+A web sobe com `--host` (LAN). Logs em `logs/` (gitignored).
 
 ## Verificação
 
@@ -65,4 +80,4 @@ npm run typecheck   # tsc nos dois projetos
 - Check-in por QR code (app do aluno)
 - Agendamento de aulas coletivas
 - Migração dos ~400 clientes (import CSV → endpoint ou script)
-- Testes (vitest/jest) e CI
+- CI para a suíte existente (`npm test`: node:test + tsx, `api/test/` contra `gymdb_test`)

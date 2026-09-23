@@ -9,8 +9,10 @@ const links = [
   { to: '/planos', label: 'Planos' },
   { to: '/pagamentos', label: 'Pagamentos' },
   { to: '/checkin', label: 'Check-in' },
+  { to: '/frequencia', label: 'Frequência' },
   { to: '/unidades', label: 'Unidades' },
   { to: '/usuarios', label: 'Usuários' },
+  { to: '/catracas', label: 'Catracas', admin: true },
 ];
 
 const roleLabel: Record<string, string> = {
@@ -30,7 +32,9 @@ export function AppLayout() {
           <Logo />
         </div>
         <nav className="flex flex-1 flex-col gap-1">
-          {links.map((link) => (
+          {links
+            .filter((link) => !link.admin || user?.role === 'ADMIN')
+            .map((link) => (
             <NavLink
               key={link.to}
               to={link.to}

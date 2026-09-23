@@ -14,6 +14,7 @@ import { PlanosModule } from './modules/planos/planos.module';
 import { MatriculasModule } from './modules/matriculas/matriculas.module';
 import { PagamentosModule } from './modules/pagamentos/pagamentos.module';
 import { CheckInsModule } from './modules/checkins/checkins.module';
+import { CatracasModule } from './modules/catracas/catracas.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { CheckInsModule } from './modules/checkins/checkins.module';
     MatriculasModule,
     PagamentosModule,
     CheckInsModule,
+    CatracasModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

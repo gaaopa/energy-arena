@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { AlunoForm, type AlunoParaForm } from '../components/AlunoForm';
+import { AlunoFoto } from '../components/AlunoFoto';
 import {
   StatusAlunoBadge,
   type StatusAluno,
@@ -17,6 +18,10 @@ interface Aluno {
   dataNascimento: string | null;
   status: StatusAluno;
   unidadeId: string;
+  foto: string | null;
+  catracaId: number | null;
+  consentimentoBiometriaEm: string | null;
+  atualizadoEm: string;
   unidade: { id: string; nome: string };
 }
 
@@ -99,6 +104,7 @@ export function AlunosPage() {
               <th className="px-5 py-3 font-medium">Nome</th>
               <th className="px-5 py-3 font-medium">CPF</th>
               <th className="px-5 py-3 font-medium">Unidade</th>
+              <th className="px-5 py-3 font-medium">Celular</th>
               <th className="px-5 py-3 font-medium">Status</th>
               <th className="px-5 py-3 font-medium">
                 <span className="sr-only">Ações</span>
@@ -111,8 +117,15 @@ export function AlunosPage() {
                 <td className="px-5 py-3">
                   <Link
                     to={`/alunos/${aluno.id}`}
-                    className="font-medium text-zinc-900 hover:underline"
+                    className="flex items-center gap-3 font-medium text-zinc-900 hover:underline"
                   >
+                    <AlunoFoto
+                      alunoId={aluno.id}
+                      nome={aluno.nome}
+                      foto={aluno.foto}
+                      versao={aluno.atualizadoEm}
+                      className="h-9 w-9 text-xs"
+                    />
                     {aluno.nome}
                   </Link>
                 </td>
@@ -121,6 +134,9 @@ export function AlunosPage() {
                 </td>
                 <td className="px-5 py-3 text-zinc-600">
                   {aluno.unidade.nome}
+                </td>
+                <td className="px-5 py-3 text-zinc-600">
+                  {aluno.telefone ?? '—'}
                 </td>
                 <td className="px-5 py-3">
                   <StatusAlunoBadge status={aluno.status} />

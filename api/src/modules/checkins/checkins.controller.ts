@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { CheckInsService } from './checkins.service';
 import { CreateCheckInDto, QueryCheckInsDto } from './dto/checkin.dto';
@@ -16,9 +25,23 @@ export class CheckInsController {
     return this.checkins.findAll(query, user);
   }
 
+  @Get('relatorio')
+  relatorio(@CurrentUser() user: AuthUser) {
+    return this.checkins.relatorio(user);
+  }
+
   @Post()
   @Roles(Role.ADMIN, Role.RECEPCAO, Role.INSTRUTOR)
   create(@Body() dto: CreateCheckInDto, @CurrentUser() user: AuthUser) {
     return this.checkins.create(dto, user);
+  }
+
+  @Patch(':id/saida')
+  @Roles(Role.ADMIN, Role.RECEPCAO, Role.INSTRUTOR)
+  registrarSaida(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.checkins.registrarSaida(id, user);
   }
 }

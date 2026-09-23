@@ -24,6 +24,7 @@ interface AlunoBusca {
 interface CheckInCriado {
   id: string;
   criadoEm: string;
+  saiuEm: string | null;
   aluno: { id: string; nome: string };
   unidade: { id: string; nome: string };
 }
@@ -103,6 +104,51 @@ export function CheckInPage() {
       });
     },
   });
+
+  const inicioDia = new Date();
+  inicioDia.setHours(0, 0, 0, 0);
+  const { data: hoje } = useQuery({
+    queryKey: ['checkins', 'hoje', unidadeId],
+    queryFn: async () =>
+      (
+        await api.get<CheckInCriado[]>('/checkins', {
+          params: {
+            de: inicioDia.toISOString(),
+            ...(unidadeId ? { unidadeId } : {}),
+          },
+        })
+      ).data,
+  });
+
+  const saida = useMutation({
+    mutationFn: async (id: string) =>
+      (await api.patch<CheckInCriado>(`/checkins/${id}/saida`)).data,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['checkins'] });
+    },
+    onError: (err) => {
+      setMensagem({
+        tipo: 'erro',
+        texto: extrairMensagemErro(err, 'Erro ao registrar saída.'),
+      });
+    },
+  });
+
+  function fmtHora(iso: string) {
+    return new Date(iso).toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+  function fmtDuracao(entrada: string, saidaIso: string) {
+    const min = Math.round(
+      (new Date(saidaIso).getTime() - new Date(entrada).getTime()) / 60_000,
+    );
+    const h = Math.floor(min / 60);
+    return h > 0
+      ? `${h}h${String(min % 60).padStart(2, '0')}`
+      : `${min}min`;
+  }
 
   function selecionar(aluno: AlunoBusca) {
     setAlunoSel(aluno);
@@ -238,6 +284,47 @@ export function CheckInPage() {
           {checkin.isPending ? 'Registrando...' : 'Registrar check-in'}
         </button>
       </form>
+
+      <div className="mt-6 rounded-xl bg-white p-6 shadow-sm">
+        <h3 className="mb-3 text-sm font-semibold">Check-ins de hoje</h3>
+        <ul className="divide-y divide-zinc-100">
+          {(hoje ?? []).map((c) => (
+            <li
+              key={c.id}
+              className="flex items-center justify-between gap-2 py-2 text-sm"
+            >
+              <div>
+                <p className="font-medium">{c.aluno.nome}</p>
+                <p className="text-xs text-zinc-500">
+                  {c.unidade.nome} · entrada {fmtHora(c.criadoEm)}
+                  {c.saiuEm
+                    ? ` · saída ${fmtHora(c.saiuEm)} · ${fmtDuracao(c.criadoEm, c.saiuEm)}`
+                    : ''}
+                </p>
+              </div>
+              {c.saiuEm ? (
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">
+                  Concluído
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => saida.mutate(c.id)}
+                  disabled={saida.isPending}
+                  className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs hover:bg-zinc-100 disabled:opacity-50"
+                >
+                  Registrar saída
+                </button>
+              )}
+            </li>
+          ))}
+          {(hoje ?? []).length === 0 && (
+            <li className="py-3 text-sm text-zinc-500">
+              Nenhum check-in hoje{unidadeId ? ' nesta unidade' : ''}.
+            </li>
+          )}
+        </ul>
+      </div>
     </div>
   );
 }

@@ -14,7 +14,7 @@ import {
 } from './_lib.mjs';
 
 const WORKSPACES = {
-  api: { dir: 'api', args: ['--noEmit', '-p', 'tsconfig.json', '--pretty', 'false'], cobre: (rel) => rel.startsWith('src/') || rel === 'prisma/seed.ts' },
+  api: { dir: 'api', args: ['--noEmit', '-p', 'tsconfig.json', '--pretty', 'false'], cobre: (rel) => rel.startsWith('src/') || rel === 'prisma/seed.ts' || rel.startsWith('test/') },
   web: { dir: 'web', args: ['-b', '--noEmit', '--pretty', 'false'], cobre: (rel) => rel.startsWith('src/') || rel === 'vite.config.ts' },
 };
 // Classe que quebra o boot: nome/namespace/módulo/export inexistente, ou sintaxe (TS1xxx).

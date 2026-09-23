@@ -3,19 +3,30 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { MatriculaForm } from '../components/MatriculaForm';
+import {
+  TrocarPlanoForm,
+  type MatriculaParaTroca,
+} from '../components/TrocarPlanoForm';
 import { PERIODO_LABEL, type Periodo } from '../components/PlanoForm';
 
-type StatusMatricula = 'ATIVA' | 'CANCELADA' | 'VENCIDA' | 'SUSPENSA';
+type StatusMatricula = 'ATIVA' | 'INATIVA' | 'VENCIDA' | 'SUSPENSA';
 
 interface Matricula {
   id: string;
   dataInicio: string;
-  dataFim: string;
+  dataFim: string | null;
+  proximaRenovacao: string | null;
   valor: number | string;
   status: StatusMatricula;
   aluno: { id: string; nome: string };
-  plano: { id: string; nome: string; periodo: Periodo };
+  plano: {
+    id: string;
+    nome: string;
+    periodo: Periodo;
+    recorrente: boolean;
+  };
   unidade: { id: string; nome: string };
 }
 
@@ -26,14 +37,14 @@ interface Unidade {
 
 const STATUS_LABEL: Record<StatusMatricula, string> = {
   ATIVA: 'Ativa',
-  CANCELADA: 'Cancelada',
+  INATIVA: 'Inativa',
   VENCIDA: 'Vencida',
   SUSPENSA: 'Suspensa',
 };
 
 const STATUS_BADGE: Record<StatusMatricula, string> = {
   ATIVA: 'bg-emerald-100 text-emerald-700',
-  CANCELADA: 'bg-red-100 text-red-700',
+  INATIVA: 'bg-red-100 text-red-700',
   VENCIDA: 'bg-amber-100 text-amber-700',
   SUSPENSA: 'bg-zinc-200 text-zinc-600',
 };
@@ -57,6 +68,8 @@ export function MatriculasPage() {
   const [status, setStatus] = useState<StatusMatricula | ''>('');
   const [unidadeFiltro, setUnidadeFiltro] = useState('');
   const [formAberto, setFormAberto] = useState(false);
+  const [trocando, setTrocando] = useState<MatriculaParaTroca | null>(null);
+  const [cancelando, setCancelando] = useState<Matricula | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
   const {
@@ -98,17 +111,6 @@ export function MatriculasPage() {
       );
     },
   });
-
-  function confirmarCancelamento(m: Matricula) {
-    if (
-      window.confirm(
-        `Cancelar a matrícula de ${m.aluno.nome} (${m.plano.nome})?`,
-      )
-    ) {
-      setErro(null);
-      cancelar.mutate(m.id);
-    }
-  }
 
   return (
     <div>
@@ -158,7 +160,7 @@ export function MatriculasPage() {
               <th className="px-5 py-3 font-medium">Plano</th>
               <th className="px-5 py-3 font-medium">Unidade</th>
               <th className="px-5 py-3 font-medium">Início</th>
-              <th className="px-5 py-3 font-medium">Fim</th>
+              <th className="px-5 py-3 font-medium">Fim / Renovação</th>
               <th className="px-5 py-3 font-medium">Valor</th>
               <th className="px-5 py-3 font-medium">Status</th>
               <th className="px-5 py-3 font-medium">Ações</th>
@@ -176,7 +178,22 @@ export function MatriculasPage() {
                 </td>
                 <td className="px-5 py-3">{m.unidade.nome}</td>
                 <td className="px-5 py-3">{formatData(m.dataInicio)}</td>
-                <td className="px-5 py-3">{formatData(m.dataFim)}</td>
+                <td className="px-5 py-3">
+                  {m.dataFim === null ? (
+                    m.status === 'ATIVA' ? (
+                      <span>
+                        Renova{' '}
+                        {m.proximaRenovacao
+                          ? formatData(m.proximaRenovacao)
+                          : '—'}
+                      </span>
+                    ) : (
+                      '—'
+                    )
+                  ) : (
+                    formatData(m.dataFim)
+                  )}
+                </td>
                 <td className="px-5 py-3">{brl.format(Number(m.valor))}</td>
                 <td className="px-5 py-3">
                   <span
@@ -187,13 +204,21 @@ export function MatriculasPage() {
                 </td>
                 <td className="px-5 py-3">
                   {m.status === 'ATIVA' && (
-                    <button
-                      onClick={() => confirmarCancelamento(m)}
-                      disabled={cancelar.isPending}
-                      className="text-sm text-red-600 hover:underline disabled:opacity-50"
-                    >
-                      Cancelar
-                    </button>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setTrocando(m)}
+                        className="text-sm text-zinc-600 hover:underline"
+                      >
+                        Trocar plano
+                      </button>
+                      <button
+                        onClick={() => setCancelando(m)}
+                        disabled={cancelar.isPending}
+                        className="text-sm text-red-600 hover:underline disabled:opacity-50"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
                   )}
                 </td>
               </tr>
@@ -215,6 +240,25 @@ export function MatriculasPage() {
         )}
       </div>
       {formAberto && <MatriculaForm onClose={() => setFormAberto(false)} />}
+      {trocando && (
+        <TrocarPlanoForm
+          matricula={trocando}
+          onClose={() => setTrocando(null)}
+        />
+      )}
+      {cancelando && (
+        <ConfirmDialog
+          titulo="Cancelar matrícula"
+          mensagem={`Cancelar a matrícula de ${cancelando.aluno.nome} (${cancelando.plano.nome})?`}
+          confirmLabel="Cancelar matrícula"
+          onClose={() => setCancelando(null)}
+          onConfirm={() => {
+            setErro(null);
+            cancelar.mutate(cancelando.id);
+            setCancelando(null);
+          }}
+        />
+      )}
     </div>
   );
 }

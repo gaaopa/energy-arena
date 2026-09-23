@@ -9,5 +9,9 @@ coverage/
 .vite/
 *.tsbuildinfo
 devin-tokens.sh
+uploads/
+logs/
 .claude/hooks/.state/
 scripts/agentes/saida/
+nul
+premio-pior-amigo.*

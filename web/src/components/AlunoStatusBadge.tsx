@@ -1,5 +1,5 @@
 export type StatusAluno = 'ATIVO' | 'INATIVO' | 'SUSPENSO';
-export type StatusMatricula = 'ATIVA' | 'CANCELADA' | 'VENCIDA' | 'SUSPENSA';
+export type StatusMatricula = 'ATIVA' | 'INATIVA' | 'VENCIDA' | 'SUSPENSA';
 
 interface BadgeConfig {
   label: string;
@@ -14,7 +14,7 @@ const STATUS_ALUNO: Record<StatusAluno, BadgeConfig> = {
 
 const STATUS_MATRICULA: Record<StatusMatricula, BadgeConfig> = {
   ATIVA: { label: 'Ativa', classes: 'bg-emerald-100 text-emerald-700' },
-  CANCELADA: { label: 'Cancelada', classes: 'bg-zinc-200 text-zinc-600' },
+  INATIVA: { label: 'Inativa', classes: 'bg-zinc-200 text-zinc-600' },
   VENCIDA: { label: 'Vencida', classes: 'bg-red-100 text-red-700' },
   SUSPENSA: { label: 'Suspensa', classes: 'bg-amber-100 text-amber-700' },
 };

@@ -58,11 +58,12 @@ entra em `BACKLOG.md` na mesma sessão, nunca só no chat.
 ## Como trabalhar
 
 - Transforme a tarefa em critério observável antes de começar: bug vira reprodução que falha
-  e depois passa; validação nova vira entrada inválida rejeitada. Este repositório ainda não
-  tem suíte de testes da aplicação (sem script `test`, sem `*.spec.ts`; o `README.md` lista
-  "Testes (vitest/jest) e CI" como próximo passo). Até existir, prova de comportamento é um
-  comando reproduzível com saída colada (`curl` contra a API local, script `tsx`, consulta ao
-  banco local). Escolher o runner da aplicação é decisão do dono; não o instale por conta.
+  e depois passa; validação nova vira entrada inválida rejeitada. A suíte de testes da
+  aplicação é `node:test` + `tsx` (decisão do dono, 2026-09-23): `npm test` roda
+  `api/test/*.test.ts` contra o banco isolado `gymdb_test` (criado/migrado por
+  `api/scripts/ensure-test-db.mjs`; nunca `gymdb`). Prova de comportamento fora da suíte é
+  comando reproduzível com saída colada (`curl` contra a API local, script `tsx`, consulta
+  ao banco local).
 - Toque só no que o pedido exige. Sem abstração para uso único, sem flexibilidade não pedida,
   sem tratamento para cenário que não acontece. Código morto alheio se menciona, não se apaga.
 - Verificação mínima antes de dizer "pronto": `npm run typecheck` (api + web, ~5 s, linha de

@@ -109,13 +109,19 @@ async function main() {
   });
   const planoRecorrente = await prisma.plano.upsert({
     where: { id: UID.planoRecorrente },
-    update: { nome: 'Recorrente', valor: 143.0, periodo: PeriodoPlano.MENSAL },
+    update: {
+      nome: 'Recorrente',
+      valor: 143.0,
+      periodo: PeriodoPlano.MENSAL,
+      recorrente: true,
+    },
     create: {
       id: UID.planoRecorrente,
       nome: 'Recorrente',
       descricao: 'Cartão de crédito recorrente',
       valor: 143.0,
       periodo: PeriodoPlano.MENSAL,
+      recorrente: true,
     },
   });
   const planoSemestral = await prisma.plano.upsert({
@@ -168,57 +174,120 @@ async function main() {
         telefone: `(11) 9${8000 + i}-0000`,
         dataNascimento: new Date(1990 + (i % 15), i % 12, (i % 27) + 1),
         unidadeId: a.unidade.id,
+        // Todo aluno seedado ganha matrícula logo abaixo — e matrícula
+        // carrega consentimento de biometria (regra desde 2026-09-22)
+        consentimentoBiometriaEm: new Date(),
       },
     });
 
     const inicio = diasAtras(30 + i * 5);
-    const fim = new Date(inicio);
-    fim.setMonth(
-      fim.getMonth() +
+    const fimCiclo = new Date(inicio);
+    fimCiclo.setMonth(
+      fimCiclo.getMonth() +
         { MENSAL: 1, TRIMESTRAL: 3, SEMESTRAL: 6, ANUAL: 12 }[a.plano.periodo],
     );
+    // Recorrente: sem dataFim; a renovação é a primeira fronteira de
+    // ciclo no futuro (o aluno seedado está com os ciclos quitados)
+    const recorrente = a.plano.recorrente;
+    const renovacao = new Date(fimCiclo);
+    if (recorrente) {
+      const agora = new Date();
+      while (renovacao <= agora) {
+        renovacao.setMonth(renovacao.getMonth() + 1);
+      }
+    }
 
     const matricula = await prisma.matricula.upsert({
       where: { id: seedId(1, i) },
-      update: { valor: a.plano.valor },
+      update: {
+        planoId: a.plano.id,
+        unidadeId: a.unidade.id,
+        valor: a.plano.valor,
+        dataFim: recorrente ? null : fimCiclo,
+        proximaRenovacao: recorrente ? renovacao : null,
+      },
       create: {
         id: seedId(1, i),
         alunoId: aluno.id,
         planoId: a.plano.id,
         unidadeId: a.unidade.id,
         dataInicio: inicio,
-        dataFim: fim,
+        dataFim: recorrente ? null : fimCiclo,
+        proximaRenovacao: recorrente ? renovacao : null,
         valor: a.plano.valor,
       },
     });
 
     const pago = a.pagoDias !== null;
-    await prisma.pagamento.upsert({
-      where: { id: seedId(2, i) },
-      update: { valor: a.plano.valor },
-      create: {
-        id: seedId(2, i),
-        matriculaId: matricula.id,
-        valor: a.plano.valor,
-        vencimento: pago ? diasAtras(a.pagoDias) : diasAtras(-10 - i),
-        pagoEm: pago ? diasAtras(a.pagoDias) : null,
-        metodo: pago
-          ? [MetodoPagamento.PIX, MetodoPagamento.CARTAO_CREDITO][i % 2]
-          : null,
-        status: pago ? StatusPagamento.PAGO : StatusPagamento.PENDENTE,
-      },
-    });
-
-    // Alguns check-ins recentes para o dashboard
-    if (i % 2 === 0) {
-      await prisma.checkIn.upsert({
-        where: { id: seedId(3, i) },
-        update: {},
+    if (recorrente) {
+      // Ciclo anterior quitado + próxima cobrança PENDENTE na renovação,
+      // igual ao que marcarPago() gera no runtime
+      const cicloQuitado = new Date(renovacao);
+      cicloQuitado.setMonth(cicloQuitado.getMonth() - 1);
+      if (pago) {
+        await prisma.pagamento.upsert({
+          where: { id: seedId(2, i) },
+          update: { valor: a.plano.valor },
+          create: {
+            id: seedId(2, i),
+            matriculaId: matricula.id,
+            valor: a.plano.valor,
+            vencimento: cicloQuitado,
+            pagoEm: cicloQuitado,
+            metodo: MetodoPagamento.CARTAO_CREDITO,
+            status: StatusPagamento.PAGO,
+          },
+        });
+      }
+      await prisma.pagamento.upsert({
+        where: { id: seedId(4, i) },
+        update: { valor: a.plano.valor },
         create: {
-          id: seedId(3, i),
+          id: seedId(4, i),
+          matriculaId: matricula.id,
+          valor: a.plano.valor,
+          vencimento: renovacao,
+          status: StatusPagamento.PENDENTE,
+        },
+      });
+    } else {
+      await prisma.pagamento.upsert({
+        where: { id: seedId(2, i) },
+        update: { valor: a.plano.valor },
+        create: {
+          id: seedId(2, i),
+          matriculaId: matricula.id,
+          valor: a.plano.valor,
+          vencimento: pago ? diasAtras(a.pagoDias) : diasAtras(-10 - i),
+          pagoEm: pago ? diasAtras(a.pagoDias) : null,
+          metodo: pago
+            ? [MetodoPagamento.PIX, MetodoPagamento.CARTAO_CREDITO][i % 2]
+            : null,
+          status: pago ? StatusPagamento.PAGO : StatusPagamento.PENDENTE,
+        },
+      });
+    }
+
+    // Histórico de check-ins (entrada + saída) para a aba Frequência:
+    // 8–20 acessos nos últimos ~50 dias, permanência de 45–110 min
+    const totalCks = 8 + ((i * 7) % 13);
+    for (let j = 0; j < totalCks; j++) {
+      const dia = Math.floor((j * 50) / totalCks); // espalha ~50 dias
+      const hora = 6 + ((i * 3 + j * 5) % 16); // 6h–21h
+      const entrada = diasAtras(dia);
+      entrada.setHours(hora, (i * 11 + j * 17) % 60, 0, 0);
+      const saida = new Date(entrada);
+      saida.setMinutes(saida.getMinutes() + 45 + ((i * 13 + j * 7) % 66));
+
+      await prisma.checkIn.upsert({
+        where: { id: seedId(3, i * 40 + j) },
+        update: { saiuEm: saida },
+        create: {
+          id: seedId(3, i * 40 + j),
           alunoId: aluno.id,
           unidadeId: a.unidade.id,
-          criadoEm: diasAtras(0),
+          criadoEm: entrada,
+          saiuEm: saida,
         },
       });
     }
