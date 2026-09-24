@@ -1,0 +1,65 @@
+name: Strix Security Scan
+
+on:
+  pull_request:
+  schedule:
+    # 03:00 America/Sao_Paulo (06:00 UTC), todo dia, sobre a main
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      scan_mode:
+        description: 'Profundidade do scan'
+        type: choice
+        default: standard
+        options: [quick, standard, deep]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: strix-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  strix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      STRIX_LLM: ${{ secrets.STRIX_LLM }}
+      LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Exigir segredos configurados
+        run: |
+          faltam=""
+          [ -z "$STRIX_LLM" ] && faltam="$faltam STRIX_LLM"
+          [ -z "$LLM_API_KEY" ] && faltam="$faltam LLM_API_KEY"
+          if [ -n "$faltam" ]; then
+            echo "::error::Segredos ausentes no repositório:$faltam — Settings > Secrets and variables > Actions"
+            exit 1
+          fi
+
+      - name: Instalar Strix
+        run: curl -sSL https://strix.ai/install | bash
+
+      # PR: quick, só arquivos alterados, teto de US$ 5.
+      - name: Scan do pull request
+        if: github.event_name == 'pull_request'
+        run: strix -n -t ./ --scan-mode quick --scope-mode diff --diff-base "origin/${{ github.base_ref }}" --max-budget 5
+
+      # Noturno/manual: repositório inteiro, teto de US$ 20.
+      - name: Scan completo
+        if: github.event_name != 'pull_request'
+        run: strix -n -t ./ --scan-mode ${{ github.event.inputs.scan_mode || 'standard' }} --scope-mode full --max-budget 20
+
+      - name: Guardar relatório
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: strix-report-${{ github.run_id }}
+          path: strix_runs/
+          if-no-files-found: ignore
+          retention-days: 30
